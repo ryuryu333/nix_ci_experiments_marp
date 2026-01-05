@@ -151,7 +151,7 @@ jobs:
           MARP_BUILD_TARGETS: ${{ needs.resolve_targets.outputs.targets }}
         run: |
           read -ra targets <<< "$MARP_BUILD_TARGETS"
-          echo "Building PDFs for targets: ${targets[@]}"
+          echo "Building PDFs for targets: ${targets[*]}"
           nix develop .#ci -c task marp -- "${targets[@]}"
 
       - name: Archive PDFs
