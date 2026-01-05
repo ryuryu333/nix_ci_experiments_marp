@@ -1,0 +1,7 @@
+{
+    "recommendations": [
+        "marp-team.marp-vscode",
+        "github.vscode-github-actions",
+        "jetmartin.bats"
+    ]
+}

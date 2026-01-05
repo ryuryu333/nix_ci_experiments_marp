@@ -1,0 +1,132 @@
+version: '3'
+
+silent: true
+
+tasks:
+  default:
+    cmds:
+      - task --list
+
+  marp_build:
+    desc: Convert md to pdf using marp
+    aliases:
+      - marp
+    preconditions:
+      - sh: test -n "{{.CLI_ARGS}}"
+        msg: "file-name or directory is required, e.g. task marp_build -- slides/topic1/main.md or slides/topic1"
+    cmds:
+      - marp --pdf --allow-local-files {{.CLI_ARGS}}
+
+  lint:
+    desc: Run all linters
+    cmds:
+      - task: ci:lint
+      - task: bash:lint
+  
+  fmt:
+    desc: Run all formatters
+    cmds:
+      - task: bash:fmt
+      - task: ci:fmt
+
+  ci:lint:
+    desc: Run all CI linters
+    internal: true
+    cmds:
+      - actionlint
+      - ghalint run
+      - ghalint act
+      - zizmor .
+
+  ci:fmt:
+    desc: Run all CI formatters
+    sources:
+      - .github/workflows/*.yml
+      - .github/actions/**/*.yml
+    method: none
+    internal: true
+    cmds:
+      - for: sources
+        cmd: |
+          echo "Formatting {{ .ITEM }}"
+          prettier --write {{ .ITEM }}
+
+  ci:pin_actions:
+    desc: Pin GitHub Actions versions in .github/workflows/*.yml
+    aliases:
+      - pin
+    cmds:
+      - pinact run
+
+  ci:test:
+    desc: Test GitHub Actions workflows locally using act (colima start)
+    preconditions:
+      - sh: gh auth token
+        msg: "GitHub authentication token is required. Please run 'gh auth login' first."
+    platforms: [linux/amd64, darwin/arm64]
+    cmds:
+      - cmd: |
+          act \
+          #workflow_dispatch \
+          push \
+          -e act/event.json \
+          -W .github/workflows/marp_build.yml \
+          -j resolve_targets \
+          --input targets=test \
+          -s GITHUB_TOKEN="$(gh auth token)" \
+          -P ubuntu-latest=catthehacker/ubuntu:act-latest \
+          --container-daemon-socket unix:///home/ryu/.config/colima/default/docker.sock \
+          --container-architecture linux/amd64 \
+          --input targets=test
+        platforms: [linux/amd64]
+      - cmd: |
+          act \
+          #workflow_dispatch \
+          push \
+          -e act/event.json \
+          -W .github/workflows/marp_build.yml \
+          -j resolve_targets \
+          --input targets=test \
+          -s GITHUB_TOKEN="$(gh auth token)" \
+          -P ubuntu-latest=catthehacker/ubuntu:act-latest \
+          --container-daemon-socket /var/run/docker.sock \
+          --container-architecture linux/amd64 \
+          --input targets=test
+        platforms: [darwin/arm64]
+
+  bash:fmt:
+    desc: Bash script formatting
+    sources:
+      - src/**/*.sh
+      - test/**/*.bats
+    method: none
+    internal: true
+    cmds:
+      - for: sources
+        cmd: |
+          echo "Formatting {{ .ITEM }}"
+          shfmt -w {{ .ITEM }}
+      
+  bash:lint:
+    desc: Bash script linting
+    sources:
+      - src/**/*.sh
+      - test/**/*.bats
+    method: none
+    internal: true
+    cmds:
+      - for: sources
+        cmd: |
+          echo "Linting {{ .ITEM }}"
+          shellcheck {{ .ITEM }}
+
+  bash:test:
+    desc: Run BATS tests
+    sources:
+      - test/**/*.bats
+    method: none
+    cmds:
+      - for: sources
+        cmd: |
+          echo "Testing {{ .ITEM }}"
+          bats {{ .ITEM }}
