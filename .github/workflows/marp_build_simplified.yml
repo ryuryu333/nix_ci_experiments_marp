@@ -24,7 +24,7 @@ jobs:
         with:
           nix_conf: |
             keep-env-derivations = true
-            keep-outputs = false
+            keep-outputs = true
 
       - name: Build PDFs
         env:
