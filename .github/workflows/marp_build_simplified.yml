@@ -1,4 +1,4 @@
-name: "marp_build"
+name: "marp_build_simplified"
 
 on:
   workflow_dispatch:
